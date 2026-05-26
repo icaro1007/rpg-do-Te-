@@ -1,0 +1,255 @@
+/* ==========================================================================
+   RPG CARD GAME - STYLE.CSS
+   Estilo completo para transformar a arena em uma mesa de jogo profissional.
+   ========================================================================== */
+
+:root {
+    /* Cores Temáticas (Mesa de RPG de Tabuleiro) */
+    --bg-mesa: #1a1512; /* Tom de madeira escura/tabuleiro */
+    --bg-feltro: #2b221a; /* Área de jogo */
+    --bg-carta: #f4eedb; /* Cor de pergaminho antigo para as cartas */
+    --borda-ouro: #d4af37; /* Detalhes em dourado */
+    --borda-carta: #8c6d4f; /* Borda padrão de madeira/couro */
+    
+    /* Cores de Atributos */
+    --cor-vida: #e63946; /* Vermelho para os corações */
+    --cor-ataque: #4a90e2; /* Azul/Prata para as espadas */
+    --texto-carta: #2c2520;
+    
+    /* Efeitos Visuais */
+    --sombra-suave: 0 4px 10px rgba(0, 0, 0, 0.5);
+    --sombra-card-hover: 0 12px 24px rgba(0, 0, 0, 0.7);
+    --transicao: all 0.25s ease-in-out;
+}
+
+/* 1. CONFIGURAÇÃO GERAL DA MESA DE JOGO */
+body {
+    background-color: var(--bg-mesa);
+    background-image: radial-gradient(circle, var(--bg-feltro) 0%, var(--bg-mesa) 100%);
+    font-family: 'Georgia', serif;
+    color: #f0ead6;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+}
+
+h3 {
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 10px 0;
+    color: var(--borda-ouro);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    font-size: 1.2rem;
+    width: 100%;
+}
+
+/* 2. ZONAS DE JOGO (MÃOS E ARENA) */
+#campo-j1, #campo-j2, #mao-j1, #mao-j2 {
+    width: 100%;
+    max-width: 1000px; /* ISSO TRAVA O TAMANHO PARA TODOS FICAREM IGUAIS */
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #3a2f25 !important;
+    border-radius: 12px;
+    padding: 15px;
+    margin: 10px auto !important; /* ISSO CENTRALIZA A DIV NA TELA */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    min-height: 220px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    box-sizing: border-box;
+}
+
+/* Diferenciação sutil para o lado do oponente */
+#mao-j2, #campo-j2 {
+    background: rgba(40, 20, 20, 0.2);
+    border-color: #4a2020 !important;
+}
+
+/* 3. DESIGN COMPLETO DAS CARTAS */
+.carta-aliada, .carta-inimiga-espera, .carta-inimiga {
+    background-color: var(--bg-carta) !important;
+    color: var(--texto-carta);
+    width: 140px;
+    border: 3px solid var(--borda-carta);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    box-shadow: var(--sombra-suave);
+    transition: var(--transicao);
+    box-sizing: border-box;
+    margin: 0 !important; /* Retirando as margens do JS inline para o CSS agir */
+}
+
+/* Título/Nome da Carta */
+.nome-carta {
+    font-size: 0.9rem;
+    font-weight: bold;
+    text-align: center;
+    display: block;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    width: 100%;
+    padding-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Imagens das Cartas */
+.carta-aliada img, .carta-inimiga-espera img, .carta-inimiga img {
+    width: 100% !important;
+    height: 100px;
+    object-fit: contain; /* Ajusta a imagem sem cortar */
+    border-radius: 6px;
+    margin-bottom: 5px;
+}
+
+/* Base onde ficam Vida e Dano */
+.status-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 5px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+}
+
+.status-vida { color: var(--cor-vida); font-weight: bold; }
+.status-ataque { color: var(--cor-ataque); font-weight: bold; }
+
+/* 4. COMPORTAMENTOS (HOVERS) */
+.carta-aliada {
+    cursor: pointer;
+}
+
+.carta-aliada:hover {
+    transform: translateY(-15px) scale(1.05);
+    box-shadow: var(--sombra-card-hover);
+    border-color: var(--borda-ouro);
+    z-index: 10;
+}
+
+.carta-inimiga-espera {
+    border-color: #8a3333;
+}
+/* ==========================================================================
+   PAINEL DO NARRADOR E TÍTULO
+   ========================================================================== */
+
+#container-principal {
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+h1 {
+    text-align: center;
+    color: var(--borda-ouro);
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.8);
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+#painel-info {
+    background-color: rgba(20, 15, 10, 0.85); /* Fundo escuro transparente */
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid var(--borda-ouro);
+    margin: 15px auto;
+    width: 100%;
+    max-width: 800px;
+    text-align: center;
+    box-shadow: var(--sombra-suave);
+    box-sizing: border-box;
+}
+
+#texto-turno {
+    color: #f1c40f; /* Dourado/Amarelo */
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+}
+
+#painel-narrador {
+    color: #ecf0f1; /* Branco/Gelo */
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 12px;
+    border-radius: 6px;
+    font-style: italic;
+    font-size: 1.1rem;
+    margin: 0;
+}
+/* ==========================================================================
+   BOTÕES DE AÇÃO E DADOS
+   ========================================================================== */
+
+/* Estilo geral para todos os botões (Iniciativa, Ação, etc) */
+button {
+    background: linear-gradient(135deg, #a07844 0%, #705028 100%);
+    border: 2px solid var(--borda-ouro);
+    color: #fff;
+    padding: 12px 25px;
+    font-family: 'Georgia', serif;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+    transition: all 0.2s ease-in-out;
+    margin: 5px;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #b88d55 0%, #886235 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(212, 175, 55, 0.4); /* Brilho dourado no hover */
+}
+
+button:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.5);
+}
+
+/* Container dos botões de rolar dado para ficarem centralizados */
+#btn-iniciativa, #btn-acao {
+    font-size: 1rem;
+}
+
+/* Estilo Épico para o Resultado do Dado na Tela */
+#dado-tela {
+    font-size: 4rem; /* Bem grande */
+    color: #e63946; /* Vermelho clássico de RPG */
+    text-shadow: 3px 3px 0px #000, 0 0 20px rgba(230, 57, 70, 0.8); /* Sombra 3D e brilho */
+    margin: 20px 0;
+    text-align: center;
+    font-weight: bold;
+    /* Adiciona uma animação para o número "pular" quando aparecer */
+    animation: rolarDadoAnimacao 0.4s ease-out;
+}
+
+/* Animação do Dado */
+@keyframes rolarDadoAnimacao {
+    0% { transform: scale(0.1) rotate(-45deg); opacity: 0; }
+    60% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); }
+}
+/* Centralizar a área dos botões de dados */
+#area-dados {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin: 20px auto;
+    width: 100%;
+    max-width: 1000px;
+    flex-wrap: wrap; /* Caso a tela seja pequena, um botão desce pro outro lado */
+}
