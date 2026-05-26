@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>RPG do T&Í - Arena</title>
+</head>
+<body>
+
+    <div style="max-width: 800px; margin: 0 auto; text-align: center; font-family: Arial, sans-serif;">
+    
+        <h1>RPG do T&Í - Arena PvP</h1>
+
+        <div id="mao-j2" style="border: 2px dashed red; padding: 10px; margin-bottom: 10px; min-height: 250px;">
+            <h3>Mão do Oponente</h3>
+            </div>
+
+        <div id="campo-j2" style="border: 2px solid darkred; padding: 20px; margin-bottom: 10px; min-height: 150px; background-color: #ffe6e6;">
+            <h3>Campo de Batalha (Oponente)</h3>
+        </div>
+
+        <div style="background-color: #333; padding: 15px; border-radius: 10px; margin: 15px 0;">
+            <h2 id="texto-turno" style="color: #f1c40f; margin-bottom: 20px;">Aguardando Iniciativa...</h2>
+            <p id="painel-narrador" style="color: #ecf0f1; background-color: #222; padding: 10px; border-radius: 5px; font-size: 16px; min-height: 24px; margin-bottom: 15px; border: 1px solid #555;">
+    Bem-vindo à Arena! Role a iniciativa.
+</p>
+            <button id="btn-iniciativa" onclick="rolarIniciativa()" style="padding: 10px; background-color: #e67e22; color: white; cursor: pointer; border-radius: 5px; font-weight: bold;">
+                Rolar Iniciativa (2 Dados)
+            </button>
+            
+            <button id="btn-acao" onclick="rolarDadoAcao()" style="display: none; padding: 10px; background-color: #3498db; color: white; cursor: pointer; border-radius: 5px; font-weight: bold;">
+                Rolar Dado de Ação (1 Dado)
+            </button>
+
+            <h2 id="dado-tela" style="font-size: 50px; margin: 10px; color: #f1c40f;">🎲 vs 🎲</h2>
+        </div>
+
+        <div id="campo-j1" style="border: 2px solid darkgreen; padding: 20px; margin-bottom: 10px; min-height: 150px; background-color: #e6ffe6;">
+            <h3>Seu Campo de Batalha</h3>
+        </div>
+
+        <div id="mao-j1" style="border: 2px dashed green; padding: 10px; margin-top: 10px; min-height: 250px;">
+            <h3>Sua Mão</h3>
+            </div>
+
+    </div> <script>
+       const bancoDeCartas = [
+            // --- CARTAS DO LOTE 1 ---
+            { id: "guerreiro", nome: "Guerreiro", vida: 5, dano: 1, img: "guerreiro.png", qtd: 4 },
+            { id: "barbaro", nome: "Bárbaro", vida: 4, dano: 2, img: "barbaro.png", qtd: 3 },
+            { id: "goblin", nome: "Goblin", vida: 4, dano: 2, img: "goblin.png", qtd: 3 },
+            { id: "ladrao", nome: "Ladrão", vida: 5, dano: 0, img: "ladrão.png", qtd: 2 },
+            { id: "necromante", nome: "Necromante", vida: 5, dano: 1, img: "necromante.png", qtd: 2 },
+            { id: "ork", nome: "Ork", vida: 3, dano: 3, img: "ork.png", qtd: 2 },
+            { id: "triogoblin", nome: "Trio de Goblin", vida: 6, dano: 4, img: "trio de goblim.png", qtd: 2 },
+            { id: "unidao", nome: "Unidão", vida: 4, dano: 1, img: "unidão.png", qtd: 2 },
+            { id: "cavaleiro", nome: "Cavaleiro das Trevas", vida: 3, dano: 1, img: "cavaleiro das trevas.png", qtd: 2 },
+            { id: "curandeiro", nome: "Curandeiro", vida: 4, dano: 0, img: "curandeiro.png", qtd: 2 },
+            { id: "ctrlc", nome: "Ctrl C", vida: 1, dano: 1, img: "ctrl c.png", qtd: 2 },
+            { id: "ctrlv", nome: "Ctrl V", vida: 1, dano: 1, img: "ctrl v.png", qtd: 2 },
+
+            // --- CARTAS DO LOTE 2 ---
+            { id: "arqueiro", nome: "Arqueiro", vida: 3, dano: 2, img: "arqueiro.png", qtd: 3 },
+            { id: "bruxo", nome: "Bruxo", vida: 4, dano: 0, img: "bruxo.png", qtd: 4 }, 
+            { id: "barril", nome: "Barril", vida: 0, dano: 0, img: "barril.png", qtd: 3 },
+            { id: "barrilbarbaro", nome: "Barril de Bárbaro", vida: 0, dano: 0, img: "barril de barbaro.png", qtd: 2 },
+            { id: "barrilgoblin", nome: "Barril de Goblin", vida: 3, dano: 0.75, img: "barril de goblim.png", qtd: 2 },
+            { id: "besta", nome: "Besta", vida: 0, dano: 0, img: "besta.png", qtd: 2 },
+            { id: "veluz", nome: "Veluz", vida: 0, dano: 0, img: "veluz.png", qtd: 2 }, 
+            { id: "adiv", nome: "Adiv", vida: 0, dano: 0, img: "adiv.png", qtd: 2 }, 
+            { id: "recuperida", nome: "Recuperida", vida: 0, dano: 0, img: "recuperida.png", qtd: 2 }, 
+            { id: "pocaotraicao", nome: "Poção da Traição", vida: 0, dano: 0, img: "poção da traição.png", qtd: 2 },
+            
+            // --- CARTAS DO LOTE 3 ---
+            { id: "pocaogelo", nome: "Poção de Gelo", vida: 0, dano: 0, img: "poção de gelo.png", qtd: 2 },
+            { id: "bumerskeleton", nome: "Bumerskeleton", vida: 3, dano: 1, img: "bumerskeleton.png", qtd: 2 }, 
+            { id: "mensageiro", nome: "Mensageiro", vida: 2, dano: 3, img: "mensageiro.png", qtd: 2 },
+            { id: "cavalotroia", nome: "Cavalo de Tróia", vida: 1, dano: 0, img: "cavalo de troia.png", qtd: 2 }, 
+            { id: "criador", nome: "Criador", vida: 0, dano: 0, img: "criador.png", qtd: 2 },
+            { id: "escudo_item", nome: "Escudo", vida: 0, dano: 0, img: "escudo.png", qtd: 2 },
+            { id: "fogueira", nome: "Fogueira", vida: 0, dano: 0, img: "fogueira.png", qtd: 2 },
+            { id: "separado", nome: "Separado", vida: 3, dano: 2, img: "separado.png", qtd: 2 },
+            { id: "separado2", nome: "Separadois", vida: 3, dano: 2, img: "separado 2.png", qtd: 2 }, 
+            { id: "viajante", nome: "Viajante do Tempo", vida: 4, dano: 1, img: "viajante do tempo.png", qtd: 2 },
+            { id: "incendiario", nome: "Incendiário", vida: 4, dano: 2, img: "incendiário.png", qtd: 3 }
+        ];
+        let deckJ1 = []; let maoJ1 = [];
+        let deckJ2 = []; let maoJ2 = [];
+        let turnoAtivo = 1; 
+        // --- NOVAS VARIÁVEIS DE CONTROLE ---
+        let orkBuffado = {}; 
+        let modoCura = false;
+        let idCurandeiroAtivo = "";
+
+        // --- FUNÇÃO PARA INVOCAR CARTAS EXTRAS ---
+        function invocarToken(idBaseCarta, idCampo) {
+            let cartaBase = bancoDeCartas.find(c => c.id === idBaseCarta);
+            if (!cartaBase) return;
+            
+            let idUnico = idBaseCarta + "-" + Math.floor(Math.random() * 10000);
+            let novaCarta = { ...cartaBase, idUnico: idUnico };
+            
+            let html = criarHTMLCarta(novaCarta, "jogarCarta", idCampo === "campo-j1" ? "carta-aliada" : "carta-inimiga", idCampo === "campo-j1");
+            
+            let tempDiv = document.createElement("div");
+            tempDiv.innerHTML = html.trim();
+            document.getElementById(idCampo).appendChild(tempDiv.firstChild);
+        }
+        let modoAtaque = false; let danoPreparado = 0;
+        let modoAtaqueInimigo = false; let danoInimigoPreparado = 0;
+        let guerreiroComEscudo = false;
+
+        function iniciarJogo() {
+            deckJ1 = []; maoJ1 = [];
+            deckJ2 = []; maoJ2 = [];
+
+            bancoDeCartas.forEach(carta => {
+                for(let i = 0; i < carta.qtd; i++) {
+                    deckJ1.push({ ...carta, idUnico: carta.id + "_" + i });
+                    deckJ2.push({ ...carta, idUnico: carta.id + "_inimigo_" + i });
+                }
+            });
+
+            deckJ1.sort(() => Math.random() - 0.5);
+            deckJ2.sort(() => Math.random() - 0.5);
+
+            let divMaoJ1 = document.getElementById("mao-j1");
+            divMaoJ1.innerHTML = "<h3>Sua Mão</h3>"; 
+            for(let i = 0; i < 5; i++) {
+                let cartaComprada = deckJ1.pop();
+                maoJ1.push(cartaComprada);
+                divMaoJ1.innerHTML += criarHTMLCarta(cartaComprada, "jogarCarta", "carta-aliada", true);
+            }
+
+            let divMaoJ2 = document.getElementById("mao-j2");
+            divMaoJ2.innerHTML = "<h3>Mão do Oponente</h3>"; 
+            for(let i = 0; i < 5; i++) {
+                let cartaComprada = deckJ2.pop();
+                maoJ2.push(cartaComprada);
+                divMaoJ2.innerHTML += criarHTMLCarta(cartaComprada, "jogarCartaInimigo", "carta-inimiga-espera", false);
+            }
+        }
+        function criarHTMLCarta(carta, funcaoJogar, classeCss, ehAliado) {
+            let btnCura = carta.nome === 'Curandeiro' ? `<button onclick="iniciarCura('${carta.idUnico}')" style="padding: 5px; background-color: #27ae60; color: white; width: 100%; margin-bottom: 2px; cursor: pointer;">Curar 💚</button>` : "";
+            
+            // Arqueiro não tem botão especial, as outras têm
+            let btnEspecial = carta.nome !== 'Arqueiro' ? `<button onclick="usarHabilidade('${carta.nome}', '${carta.idUnico}', this)" style="padding: 5px; background-color: darkblue; color: white; width: 100%; cursor: pointer;">Especial ✨</button>` : "";
+            
+            let botoes = ehAliado ? `
+                ${btnCura}
+                <button onclick="iniciarAtaque('${carta.nome}', '${carta.idUnico}')" style="padding: 5px; background-color: darkred; color: white; width: 100%; margin-bottom: 2px; cursor: pointer;">Atacar ⚔️</button>
+                ${btnEspecial}
+            ` : `
+                <button onclick="inimigoAtacar(${carta.dano})" style="padding: 5px; background-color: darkred; color: white; width: 100%; cursor: pointer;">Inimigo Atacar ⚔️</button>
+            `;
+
+            return `
+                <div id="pacote-${carta.idUnico}" class="${classeCss}" style="display: inline-block; text-align: center; margin: 5px; width: 140px;">
+                    <img src="${carta.img}" alt="${carta.nome}" onclick="${funcaoJogar}('pacote-${carta.idUnico}')" style="width: 100%; border-radius: 10px; cursor: pointer;">
+                    <br>
+                    <span style="color: #ff4d4d; font-weight: bold;">❤️ <span id="vida-${carta.idUnico}">${carta.vida}</span></span> | 
+                    <span style="color: #cccccc; font-weight: bold;">⚔️ <span id="dano-${carta.idUnico}">${carta.dano}</span></span>
+                    <div id="acoes-${carta.idUnico}" style="display: none; margin-top: 5px;">${botoes}</div>
+                </div>
+            `;
+        }
+
+// NOVA FUNÇÃO: Substitui o "alert" chato
+        function narrar(mensagem) {
+            document.getElementById("painel-narrador").innerText = mensagem;
+        }
+
+        function rolarIniciativa() {
+            let dadoJ1 = Math.floor(Math.random() * 6) + 1;
+            let dadoJ2 = Math.floor(Math.random() * 6) + 1;
+            document.getElementById("dado-tela").innerText = "Você: " + dadoJ1 + " ⚔️ Oponente: " + dadoJ2;
+
+            if (dadoJ1 > dadoJ2) {
+                turnoAtivo = 1;
+                document.getElementById("texto-turno").innerText = "Sua Vez!";
+                document.getElementById("texto-turno").style.color = "#3498db";
+                document.getElementById("btn-iniciativa").style.display = "none";
+                document.getElementById("btn-acao").style.display = "inline-block";
+                narrar("Você venceu a iniciativa! Jogue uma carta ou ataque.");
+            } else if (dadoJ2 > dadoJ1) {
+                turnoAtivo = 2;
+                document.getElementById("texto-turno").innerText = "Vez do Oponente!";
+                document.getElementById("texto-turno").style.color = "#ff4d4d";
+                document.getElementById("btn-iniciativa").style.display = "none";
+                document.getElementById("btn-acao").style.display = "inline-block";
+                narrar("O Oponente começa! Aguarde a jogada dele.");
+            } else {
+                narrar("Empate nos dados! Role a iniciativa novamente.");
+            }
+        }
+
+        function rolarDadoAcao() {
+            let dadoAcao = Math.floor(Math.random() * 6) + 1;
+            document.getElementById("dado-tela").innerText = "🎲 " + dadoAcao;
+            narrar("Você rolou um " + dadoAcao + " no dado de ação!");
+        }
+
+        function passarTurno() {
+            if (turnoAtivo === 1) {
+                turnoAtivo = 2;
+                document.getElementById("texto-turno").innerText = "Vez do Oponente!";
+                document.getElementById("texto-turno").style.color = "#ff4d4d";
+            } else {
+                turnoAtivo = 1;
+                document.getElementById("texto-turno").innerText = "Sua Vez!";
+                document.getElementById("texto-turno").style.color = "#3498db";
+            }
+        }
+
+        function jogarCarta(idDoPacote) {
+            let pacoteCarta = document.getElementById(idDoPacote);
+            document.getElementById("campo-j1").appendChild(pacoteCarta);
+            
+            let imagem = pacoteCarta.querySelector("img");
+            imagem.onclick = function() {
+                if (modoAtaqueInimigo === true) {
+                    aplicarDanoInimigo(idDoPacote);
+                } else if (modoCura === true) {
+                    aplicarCura(idDoPacote);
+                } else {
+                    narrar("Ação inválida. Use os botões abaixo da carta.");
+                }
+            }; 
+            imagem.style.cursor = "pointer";
+            
+            let divAcoes = pacoteCarta.querySelector("div[id^='acoes-']");
+            if (divAcoes) divAcoes.style.display = "block";
+            
+            narrar("Você invocou uma carta no campo!");
+            
+            // --- PASSIVA DO NECROMANTE AUTOMÁTICA ---
+            if (idDoPacote.includes("necromante")) {
+                narrar("💀 Passiva Necromante: Adicionou 2 cartas extras ao deck automaticamente!");
+                // Simula a puxada ou ganho de duas cartas extras (Goblins) para a mão do jogador
+                let mao = document.getElementById("player1-hand") || document.getElementById("mao-j1");
+                if (mao) {
+                    let cartaBase = bancoDeCartas.find(c => c.id === "guerreiro"); // puxa duas cartas base
+                    if(cartaBase) {
+                        let id1 = "extra-" + Math.floor(Math.random() * 1000);
+                        let id2 = "extra-" + Math.floor(Math.random() * 1000);
+                        mao.innerHTML += criarHTMLCarta({...cartaBase, idUnico: id1}, "jogarCarta", "carta-aliada", true);
+                        mao.innerHTML += criarHTMLCarta({...cartaBase, idUnico: id2}, "jogarCarta", "carta-aliada", true);
+                    }
+                }
+            }
+        }
+
+        function jogarCartaInimigo(idDoPacote) {
+            let pacoteCarta = document.getElementById(idDoPacote);
+            document.getElementById("campo-j2").appendChild(pacoteCarta);
+            pacoteCarta.className = "carta-inimiga"; 
+            
+            let imagem = pacoteCarta.querySelector("img");
+            imagem.onclick = function() { receberAtaque(idDoPacote.replace("pacote-", "vida-"), idDoPacote); };
+            imagem.style.cursor = "crosshair"; 
+            
+            let divAcoes = pacoteCarta.querySelector("div[id^='acoes-']");
+            if (divAcoes) divAcoes.style.display = "block";
+            narrar("O Oponente colocou uma carta no campo!");
+        }
+
+        function iniciarAtaque(nomeCarta, idUnico) {
+            if (turnoAtivo !== 1) return narrar("Calma aí! Ainda não é o seu turno.");
+            let campoInimigo = document.getElementById("campo-j2");
+            let inimigosNoCampo = campoInimigo.getElementsByClassName("carta-inimiga");
+            if (inimigosNoCampo.length === 0) return narrar("Não há inimigos no campo para atacar!");
+
+            let danoBase = parseFloat(document.getElementById("dano-" + idUnico).innerText);
+            danoPreparado = danoBase;
+
+            // --- PASSIVA DO ARQUEIRO (RODA SEMPRE NO ATAQUE) ---
+            if (nomeCarta === 'Arqueiro') {
+                let dado = Math.floor(Math.random() * 6) + 1;
+                document.getElementById("dado-tela").innerText = "🎲 " + dado;
+                if (dado <= 3) {
+                    danoPreparado += 1;
+                } else {
+                    danoPreparado += 3;
+                }
+                narrar("🏹 Passiva do Arqueiro: Rolou " + dado + "! Dano desta rodada: " + danoPreparado);
+            } 
+            // --- PASSIVA DO GOBLIN (RODA SEMPRE NO ATAQUE) ---
+            else if (nomeCarta === 'Goblin') {
+                let dado = Math.floor(Math.random() * 6) + 1;
+                document.getElementById("dado-tela").innerText = "🎲 " + dado;
+                if (dado === 2) { 
+                    danoPreparado = 4; 
+                    narrar("🗡️ Passiva do Goblin: Rolou 2! Ataque Duplo! Dano: 4"); 
+                } else {
+                    narrar("🗡️ Passiva do Goblin: Rolou " + dado + ". Dano normal: " + danoPreparado);
+                }
+            } else {
+                narrar("Selecione qual carta inimiga vai receber o ataque!");
+            }
+
+            modoAtaque = true;
+            if (inimigosNoCampo.length === 1) receberAtaque(inimigosNoCampo[0].id.replace("pacote-", "vida-"), inimigosNoCampo[0].id);
+        }
+
+        // --- SISTEMA DE CURA CORRIGIDO DO CURANDEIRO ---
+        function iniciarCura(idUnico) {
+            if (turnoAtivo !== 1) return narrar("Ainda não é o seu turno.");
+            modoCura = true; 
+            idCurandeiroAtivo = idUnico;
+            narrar("💚 Curandeiro ativado! Clique em uma carta aliada no seu campo para curá-la.");
+        }
+
+        function aplicarCura(idPacoteAlvo) {
+            // Garantir que estamos clicando em uma carta no campo aliado
+            if (!document.getElementById("campo-j1").contains(document.getElementById(idPacoteAlvo))) {
+                return narrar("Escolha uma carta que esteja no seu campo de batalha!");
+            }
+            
+            let idVida = idPacoteAlvo.replace("pacote-", "vida-");
+            let textoVida = document.getElementById(idVida);
+            let vidaAtual = parseFloat(textoVida.innerText);
+            
+            let cura = Math.ceil(vidaAtual / 2); // Cura metade da vida da carta curada
+            textoVida.innerText = vidaAtual + cura;
+            
+            narrar("💚 O Curandeiro usou sua passiva e curou " + cura + " de vida da carta! Ele não ataca nesta rodada.");
+            modoCura = false; 
+            passarTurno();
+        }
+
+        function receberAtaque(idVidaAlvo, idPacoteAlvo) {
+            if (modoAtaque === true) {
+                let textoVida = document.getElementById(idVidaAlvo);
+                let vidaAtual = parseInt(textoVida.innerText) - danoPreparado;
+                textoVida.innerText = vidaAtual; 
+
+                if (vidaAtual <= 0) {
+                    narrar("BUM! O alvo inimigo foi DESTRUÍDO!");
+                    document.getElementById(idPacoteAlvo).remove();
+                } else {
+                    narrar("Pow! O alvo tomou " + danoPreparado + " de dano!");
+                }
+                modoAtaque = false; danoPreparado = 0; passarTurno(); 
+            } else {
+                narrar("Você precisa clicar no botão 'Atacar' primeiro!");
+            }
+        }
+
+        function inimigoAtacar(danoDoInimigo) {
+            if (turnoAtivo !== 2) return narrar("Ainda não é o turno do Oponente!");
+            let campoAliado = document.getElementById("campo-j1");
+            let aliadosNoCampo = campoAliado.getElementsByClassName("carta-aliada");
+            if (aliadosNoCampo.length === 0) return narrar("Você não tem cartas no campo para o oponente atacar!");
+
+            modoAtaqueInimigo = true; danoInimigoPreparado = danoDoInimigo;
+
+            if (aliadosNoCampo.length === 1) {
+                aplicarDanoInimigo(aliadosNoCampo[0].id);
+            } else {
+                narrar("O Oponente preparou " + danoInimigoPreparado + " de dano! Clique na SUA carta que vai receber o ataque.");
+            }
+        }
+
+        function aplicarDanoInimigo(idPacoteAlvo) {
+            let idVida = idPacoteAlvo.replace("pacote-", "vida-");
+            let textoVida = document.getElementById(idVida);
+            let vidaAtual = parseFloat(textoVida.innerText) - danoInimigoPreparado;
+            textoVida.innerText = vidaAtual;
+
+            if (vidaAtual <= 0) {
+                let idCartaLimpo = idPacoteAlvo.replace("pacote-", "");
+                
+                // --- PASSIVA DO ORK AUTOMÁTICA NA MORTE ---
+                if (idPacoteAlvo.includes("ork")) {
+                    let qtdGoblins = orkSuperInvocador[idCartaLimpo] ? 3 : 2;
+                    narrar("💀 Passiva: O Ork morreu! Invocando " + qtdGoblins + " Goblins automaticamente na arena!");
+                    for(let i = 0; i < qtdGoblins; i++) {
+                        invocarToken("goblin", "campo-j1");
+                    }
+                } else {
+                    narrar("💀 Sua carta foi destruída em combate!");
+                }
+                document.getElementById(idPacoteAlvo).remove();
+            } else {
+                narrar("💥 Sua carta sofreu " + danoInimigoPreparado + " de dano!");
+            }
+            modoAtaqueInimigo = false; 
+            danoInimigoPreparado = 0; 
+            passarTurno();
+        }
+
+        function usarHabilidade(nomeCarta, idUnico, botaoClicado) {
+            if (turnoAtivo !== 1) return narrar("Não é o seu turno.");
+            let dadoHab = Math.floor(Math.random() * 6) + 1;
+            document.getElementById("dado-tela").innerText = "🎲 " + dadoHab;
+
+            // --- HABILIDADE CURANDEIRO (BOTÃO ESPECIAL) ---
+            if (nomeCarta === 'Curandeiro') {
+                if (dadoHab % 2 !== 0) { // Ímpar
+                    narrar("✨ Habilidade Curandeiro: Rolou " + dadoHab + " (Ímpar)! Causou 1 de dano mágico geral no oponente!");
+                    // Código para tirar 1 de vida do primeiro inimigo que achar
+                    let primeiroInimigo = document.getElementById("campo-j2").querySelector(".carta-inimiga");
+                    if (primeiroInimigo) {
+                        let vInimigo = primeiroInimigo.id.replace("pacote-", "vida-");
+                        document.getElementById(vInimigo).innerText = parseFloat(document.getElementById(vInimigo).innerText) - 1;
+                    }
+                    if (dadoHab === 1 || dadoHab === 3) {
+                        narrar("✨ Rolou 1 ou 3! Concedeu +0.5 de dano permanente para as suas cartas!");
+                    }
+                } else {
+                    narrar("✨ Habilidade Curandeiro: Rolou " + dadoHab + " (Par). Sem efeito ofensivo.");
+                }
+            } 
+            // --- HABILIDADE NECROMANTE (BOTÃO ESPECIAL) ---
+            else if (nomeCarta === 'Necromante') {
+                if (dadoHab >= 3 && dadoHab <= 5) {
+                    narrar("💀 Habilidade Necromante: Rolou " + dadoHab + "! As cartas invocadas vão para o combate!");
+                    invocarToken("guerreiro", "campo-j1"); // Faz lutar junto na arena
+                } else {
+                    narrar("💀 Habilidade Necromante: Rolou " + dadoHab + ". Falhou em trazer reforços.");
+                }
+            }
+            // --- HABILIDADE GOBLIN (BOTÃO ESPECIAL) ---
+            else if (nomeCarta === 'Goblin') {
+                if (dadoHab === 1 || dadoHab === 2) {
+                    let elementoDano = document.getElementById("dano-" + idUnico);
+                    elementoDano.innerText = parseFloat(elementoDano.innerText) + 1;
+                    narrar("😈 Habilidade Goblin: Rolou " + dadoHab + "! Roubou 1 de dano do oponente!");
+                } else {
+                    narrar("😈 Habilidade Goblin: Rolou " + dadoHab + ". Não conseguiu roubar nada.");
+                }
+            }
+            // --- HABILIDADE ORK (BOTÃO ESPECIAL) ---
+            else if (nomeCarta === 'Ork') {
+                if (dadoHab === 1) {
+                    orkSuperInvocador[idUnico] = true;
+                    narrar("👹 Habilidade Ork: Rolou 1 com sucesso! Quando este Ork morrer, ele vai invocar 3 Goblins em vez de 2!");
+                } else {
+                    narrar("👹 Habilidade Ork: Rolou " + dadoHab + ". O efeito falhou, ele manterá a passiva normal de 2 Goblins.");
+                }
+            }
+
+            // Esconde o botão para garantir o USO ÚNICO da Habilidade
+            if (botaoClicado) botaoClicado.style.display = "none";
+        }
+        // NOVO: Faz o jogo dar as cartas automaticamente quando a página carregar!
+        window.onload = function() {
+            iniciarJogo();
+        };
+    </script>
+</body>
+</html>
