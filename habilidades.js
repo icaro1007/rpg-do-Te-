@@ -300,6 +300,58 @@ function usarHabilidade(nome, idUnico, botao) {
         botao.style.display = "none";
         return; // Habilidade não passa o turno!
     }
+    // --- HABILIDADE DO GUERREIRO ---
+    if (nome === 'Guerreiro') {
+        let dado = Math.floor(Math.random() * 6) + 1; // Rola o dado de 1 a 6
+        
+        let dadoTela = document.getElementById("dado-tela");
+        dadoTela.style.animation = 'none';
+        setTimeout(() => dadoTela.style.animation = '', 10);
+        dadoTela.innerText = "🎲 " + dado;
+        
+        if (dado >= 1 && dado <= 4) {
+            escudoGuerreiro[idUnico] = true;
+            narrar(`🛡️ SUCESSO! O Guerreiro rolou ${dado} e ergueu o seu escudo impenetrável para esta rodada!`);
+        } else {
+            narrar(`🎲 FALHA... O Guerreiro rolou ${dado} e o escudo encravou.`);
+        }
+        
+        // Bloqueia o botão para ser de Uso Único
+        botao.style.display = "none";
+        return; // Ação rápida, não passa o turno!
+    }
+    // --- HABILIDADE: BARRIL DE GOBLINS ---
+    if (nome.includes('Barril de Goblin')) { // 🚀 .includes FAZ O CTRL V FUNCIONAR!
+        let idAlvo = alvosDoBarril[idUnico];
+        if (!idAlvo) return narrar("Este Barril precisa atacar e focar um alvo primeiro!");
+
+        // 🚀 LÊ O DANO EXTRA (BUFFS DA BESTA, UNIDÃO, ETC)
+        let txtDano = document.getElementById("dano-" + idUnico);
+        let buffDano = txtDano ? parseFloat(txtDano.innerText) : 0;
+
+        let dado = Math.floor(Math.random() * 6) + 1;
+        
+        let dadoTela = document.getElementById("dado-tela");
+        dadoTela.style.animation = 'none';
+        setTimeout(() => dadoTela.style.animation = '', 10);
+        dadoTela.innerText = "🎲 " + dado;
+        
+        if (dado === 3) {
+            let danoHabilidade = 1.5 + buffDano; // 🚀 SOMA O BUFF AQUI (0.5 + 1 da Besta = 1.5)
+            
+            let vizinhos = obterCartasAdjacentes("pacote-" + idAlvo);
+            vizinhos.forEach(vizinho => {
+                let isInimigo = vizinho.closest("#campo-j2") !== null;
+                aplicarDanoDireto(vizinho.id, danoHabilidade, isInimigo);
+            });
+            narrar(`🎲 SUCESSO! Tirou 3! O Barril causou +${danoHabilidade} de dano nos vizinhos do alvo focado!`);
+        } else {
+            narrar(`🎲 FALHA! Tirou ${dado}. A habilidade não ativou.`);
+        }
+        
+        botao.style.display = "none";
+        return; 
+    }
 }
 // --- PASSIVA DO NECROMANTE (CORREÇÃO DE ERRO) ---
 function verificarPassivaNecromante(carta, ehAliado) {
