@@ -125,10 +125,12 @@ h3 {
 .status-ataque { color: var(--cor-ataque); font-weight: bold; }
 
 /* 4. COMPORTAMENTOS (HOVERS) */
-.carta-aliada {
+.carta-aliada, .carta-inimiga, .carta-inimiga-espera {
     cursor: pointer;
+    transition: var(--transicao); /* Garante que o pulo seja suave */
 }
 
+/* 👉 SUAS CARTAS: Pulam para CIMA (-15px) e brilham em Dourado */
 .carta-aliada:hover {
     transform: translateY(-15px) scale(1.05);
     box-shadow: var(--sombra-card-hover);
@@ -136,9 +138,14 @@ h3 {
     z-index: 10;
 }
 
-.carta-inimiga-espera {
-    border-color: #8a3333;
+/* 👉 CARTAS DO OPONENTE: Pulam para BAIXO (+15px) e brilham em Vermelho */
+.carta-inimiga:hover, .carta-inimiga-espera:hover {
+    transform: translateY(15px) scale(1.05);
+    box-shadow: 0 12px 24px rgba(230, 57, 70, 0.4); /* Sombra avermelhada */
+    border-color: var(--cor-vida); /* Borda vermelha de "inimigo" */
+    z-index: 10;
 }
+
 /* ==========================================================================
    PAINEL DO NARRADOR E TÍTULO
    ========================================================================== */
