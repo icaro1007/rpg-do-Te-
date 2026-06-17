@@ -18,6 +18,11 @@ let pocaoVeluxAtiva = {}; // Guarda quais cartas beberam a Velux nesta rodada
 let modoTraicao = false;
 let idTraidor = null;
 let escudoGuerreiro = {}; // Guarda quais Guerreiros estão com o escudo ativo
+let modoAlvoBarril = false;
+let modoAlvoBarrilInimigo = false;
+let idBarrilAtivo = null;
+let alvosDoBarril = {}; // Guarda { idDoBarril: idDoAlvo }
+let barrilJaImpactou = {}; // Guarda { idDoBarril: true } se já deu o dano de impacto
 
 // 🚨 NOVIDADE: A lista de suportes/poções agora fica no topo do código!
 let suportesReais = [
@@ -160,6 +165,16 @@ function passarTurno() {
     danoPreparado = 0;
     danoInimigoPreparado = 0;
 
+    modoAtaque = false;
+    modoAtaqueInimigo = false;
+    danoPreparado = 0;
+    danoInimigoPreparado = 0;
+    
+    // 👇 ADICIONA ESTAS 3 LINHAS AQUI:
+    modoAlvoBarril = false;
+    modoAlvoBarrilInimigo = false;
+    idBarrilAtivo = null;
+
     let containerTurno = document.getElementById("texto-turno");
     if (containerTurno) {
         if (turnoAtivo === 1) {
@@ -173,6 +188,33 @@ function passarTurno() {
 
     if (turnoAtivo === 1) narrar("🔵 Seu turno começou! Planeje bem seus ataques.");
     else narrar("🔴 Turno do Oponente iniciado! Prepare-se para defender.");
+
+    // --- MALDIÇÃO DO BARRIL DE GOBLINS (Dano por rodada) ---
+    Object.keys(alvosDoBarril).forEach(idBarril => {
+        let pacoteBarril = document.getElementById("pacote-" + idBarril);
+        let idAlvo = alvosDoBarril[idBarril];
+        let pacoteAlvo = document.getElementById("pacote-" + idAlvo);
+
+        if (!pacoteBarril || !pacoteAlvo) {
+            delete alvosDoBarril[idBarril];
+            return;
+        }
+
+        let txtVida = document.getElementById("vida-" + idBarril);
+        let txtDano = document.getElementById("dano-" + idBarril); // 🚀 PEGA O DANO DA CARTA
+
+        if (txtVida) {
+            let vidaBarril = parseFloat(txtVida.innerText);
+            let buffDano = txtDano ? parseFloat(txtDano.innerText) : 0; // Se tiver Besta, vai ser 1
+            
+            // 🚀 SOMA O BUFF AQUI (Ex: (3 * 0.25) + 1 da Besta = 1.75)
+            let danoTotal = (vidaBarril * 0.25) + buffDano; 
+            
+            let isInimigo = pacoteAlvo.closest("#campo-j2") !== null;
+            aplicarDanoDireto("pacote-" + idAlvo, danoTotal, isInimigo);
+            narrar(` Os Goblins do Barril atacaram o alvo causando ${danoTotal} de dano extra no fim do turno!`);
+        }
+    });
 
     if (typeof atualizarTodosUnidoes === "function") atualizarTodosUnidoes();
 }
@@ -196,7 +238,6 @@ function invocarToken(idBaseCarta, idCampo) {
     let img = pacoteNovo.querySelector("img");
     img.removeAttribute("onclick");
     
-    // 🚨 Correção do erro de digitação (img.onclick em vez de img.img)
     img.onclick = function() {
         let idDoPacote = "pacote-" + idUnico;
         let idSemPacote = idUnico;
@@ -205,6 +246,7 @@ function invocarToken(idBaseCarta, idCampo) {
         else if (modoLadrao === true && turnoAtivo === 1 && faseLadrao === 2 && ehAliado) aplicarRouboBeneficio(idDoPacote);
         else if (modoLadrao === true && turnoAtivo === 2 && faseLadrao === 1 && ehAliado) aplicarRouboPrejuizo(idDoPacote);
         else if (modoLadrao === true && turnoAtivo === 2 && faseLadrao === 2 && !ehAliado) aplicarRouboBeneficio(idDoPacote);
+        else if (modoAlvoBarril === true && !ehAliado) aplicarAlvoBarril(idDoPacote);
         else if (modoCura === true && ehAliado) aplicarCuraAliada(idDoPacote);
         else if (modoCuraInimigo === true && !ehAliado) aplicarCuraInimiga(idDoPacote);
         else if (modoAtaqueInimigo === true && ehAliado) aplicarDanoInimigo(idDoPacote);
@@ -264,6 +306,7 @@ function jogarCarta(idDoPacote) {
         else if (modoAtaqueInimigo === true) aplicarDanoInimigo(idDoPacote);
         else if (modoCura === true) aplicarCuraAliada(idDoPacote);
         else if (modoRouboGoblin === true) aplicarRouboDanoGoblin(idDoPacote);
+        else if (modoAlvoBarril === true) aplicarAlvoBarril(idDoPacote);
         else if (suportePreparado !== null) { 
             equiparSuporte(idSemPacote);
         } else {
@@ -324,7 +367,8 @@ function jogarCartaInimigo(idDoPacote) {
         else if (modoLadrao === true && turnoAtivo === 1 && faseLadrao === 1) aplicarRouboPrejuizo(idDoPacote);
         else if (modoLadrao === true && turnoAtivo === 2 && faseLadrao === 2) aplicarRouboBeneficio(idDoPacote);
         else if (modoCuraInimigo === true) aplicarCuraInimiga(idDoPacote);
-        else if (modoRouboGoblin === true) aplicarRouboDanoGoblin(idDoPacote);    
+        else if (modoRouboGoblin === true) aplicarRouboDanoGoblin(idDoPacote); 
+        else if (modoAlvoBarril === true) aplicarAlvoBarril(idDoPacote);   
         else if (suportePreparado !== null) {
             equiparSuporte(idSemPacoteLocal);
         } else {
@@ -344,7 +388,7 @@ function jogarCartaInimigo(idDoPacote) {
 function criarHTMLCarta(carta, funcaoJogar, classeCss, ehAliado) {
     let btnCura = (carta.nome === 'Curandeiro') ? `<button onclick="iniciarCura('${carta.idUnico}')" style="background-color: green; color: white; width: 100%; margin-bottom: 2px; cursor: pointer;">Curar 💚</button>` : '';
     let btnCuraInimigo = (carta.nome === 'Curandeiro') ? `<button onclick="iniciarCuraInimigo('${carta.idUnico}')" style="background-color: green; color: white; width: 100%; margin-bottom: 2px; cursor: pointer;">Curar Oponente 💚</button>` : '';
-    let btnEspecial = (carta.nome === 'Necromante' || carta.nome === 'Ork' || carta.nome === 'Curandeiro' || carta.nome === 'Ctrl C' || carta.nome === 'Ctrl V' || carta.nome === 'Cavaleiro das Trevas' || carta.nome === 'Goblin' || carta.nome === 'Trio de Goblin') ? `<button onclick="usarHabilidade('${carta.nome}', '${carta.idUnico}', this)" style="background-color: purple; color: white; width: 100%; margin-bottom: 2px; cursor: pointer;">Especial 🔮</button>` : '';
+    let btnEspecial = (carta.nome === 'Necromante' || carta.nome === 'Ork' || carta.nome === 'Curandeiro' || carta.nome === 'Ctrl C' || carta.nome === 'Ctrl V' || carta.nome === 'Cavaleiro das Trevas' || carta.nome === 'Goblin' || carta.nome === 'Trio de Goblin' || carta.nome === 'Barril de Goblin' || carta.nome === 'Guerreiro') ? `<button onclick="usarHabilidade('${carta.nome}', '${carta.idUnico}', this)" style="background-color: purple; color: white; width: 100%; margin-bottom: 2px; cursor: pointer;">Especial 🔮</button>` : '';
     let btnLadrao = (carta.nome === 'Ladrão') ? `<button onclick="usarPassivaLadrao('${carta.idUnico}', this)" style="background-color: #f1c40f; color: black; font-weight: bold; width: 100%; margin-bottom: 2px; cursor: pointer;">Passiva 💰</button>` : '';
     let btnCtrlC = (carta.nome === 'Ctrl C' || carta.nome === 'Ctrl V') ? `<button onclick="usarPassivaCtrlC('${carta.idUnico}', this)" style="background-color: #34495e; color: white; font-weight: bold; width: 100%; margin-bottom: 2px; cursor: pointer;">Passiva 📋</button>` : '';
 
@@ -378,10 +422,13 @@ function criarHTMLCarta(carta, funcaoJogar, classeCss, ehAliado) {
 }
 
 function iniciarAtaque(nomeCarta, idUnico) {
+    modoAlvoBarril = false; // 🚀 Cancela qualquer mira do barril se clicar noutro ataque
+
     if (suportePreparado !== null) {
         equiparSuporte(idUnico);
         return; 
     }
+
     if (turnoAtivo !== 1) return narrar("Ainda não é o seu turno de atacar!");
 
     let cartaAtacante = bancoDeCartas.find(c => c.nome === nomeCarta);
@@ -395,6 +442,13 @@ function iniciarAtaque(nomeCarta, idUnico) {
     let vidaAtual = parseFloat(document.getElementById("vida-" + idUnico).innerText);
     danoPreparado = danoBase;
     ultimoIdQueAtacou = idUnico;
+
+    // 📦 ATIVAÇÃO DO BARRIL (SEU LADO)
+    if (nomeCarta.includes('Barril de Goblin')) {
+        modoAlvoBarril = true; 
+        idBarrilAtivo = idUnico;
+        return narrar("📦 Você ativou o Barril! Clique na carta do OPONENTE que vai receber os goblins!");
+    }
 
     if (nomeCarta === 'Trio de Goblin') {
         if (vidaAtual >= 5) { danoPreparado = 2; narrar("⚔️ O Trio de Goblin está completo e ataca com 2 de dano!"); } 
@@ -426,7 +480,7 @@ function iniciarAtaque(nomeCarta, idUnico) {
 
     if (nomeCarta === 'Cavaleiro das Trevas') {
         let danoArea = 2; let alvosMaximos = 1;
-        if (cavaleiroAtivado[idUnico]) { danoArea = 5; alvosMaximos = 3; } 
+        if (typeof cavaleiroAtivado !== 'undefined' && cavaleiroAtivado[idUnico]) { danoArea = 5; alvosMaximos = 3; } 
         else if (inimigosNoCampo.length >= 2) { danoArea = 3; alvosMaximos = 2; }
         let alvos = inimigosNoCampo.slice(0, alvosMaximos);
         narrar(`⚔️ O Cavaleiro das Trevas atacou ${alvos.length} inimigo(s) causando ${danoArea} de dano em cada!`);
@@ -436,13 +490,28 @@ function iniciarAtaque(nomeCarta, idUnico) {
         return; 
     }
     
- 
     modoAtaque = true; 
     narrar(`Você preparou um ataque de ${danoPreparado} de dano! Clique no inimigo que deseja acertar.`);
 }
 
 function receberAtaque(idVidaAlvo, idPacoteAlvo) {
     if (modoAtaque === true) {
+        
+        // 🛡️ NOVO: BLOQUEIO DO GUERREIRO ANTES DE TOMAR DANO
+        // 🛡️ NOVO: BLOQUEIO DO GUERREIRO ANTES DE TOMAR DANO
+        let idPuro = idPacoteAlvo.replace("pacote-", ""); 
+        if (escudoGuerreiro[idPuro]) {
+            narrar(`🛡️ BLANG! O escudo do Guerreiro Inimigo bloqueou o ataque e QUEBROU!`);
+            
+            delete escudoGuerreiro[idPuro]; // 💥 Quebra o escudo após o primeiro hit!
+            
+            modoAtaque = false; 
+            danoPreparado = 0; 
+            passarTurno(); 
+            return; 
+        }
+
+        // --- CÓDIGO ORIGINAL CONTINUA NORMALMENTE ABAIXO ---
         let textoVida = document.getElementById(idVidaAlvo);
         let vidaAtual = parseInt(textoVida.innerText) - danoPreparado;
         textoVida.innerText = vidaAtual; 
@@ -450,15 +519,17 @@ function receberAtaque(idVidaAlvo, idPacoteAlvo) {
         if (vidaAtual <= 0) {
             let pacote = document.getElementById(idPacoteAlvo);
             let nomeDestaCarta = pacote.querySelector(".nome-carta").innerText;
-            let idPuro = idPacoteAlvo.replace("pacote-", "");
 
             narrar("BUM! O alvo inimigo foi DESTRUÍDO!");
             pacote.remove();
 
             if (nomeDestaCarta === "Ork") {
-                let qtd = orkBuffado[idPuro] ? 3 : 2;
+                let qtd = orkBuffado[idPuro] ? 3 : 2; 
                 narrar(`💀 PASSIVA: O Ork Inimigo morreu e invocou ${qtd} Goblins!`);
-                for (let i = 0; i < qtd; i++) invocarToken("goblin", "campo-j2");
+                
+                for (let i = 0; i < qtd; i++) {
+                    invocarToken("goblin", "campo-j2"); // Inimigo sempre nasce no j2
+                }
             }
         } else {
             narrar("Pow! O alvo tomou " + danoPreparado + " de dano!");
@@ -471,17 +542,20 @@ function receberAtaque(idVidaAlvo, idPacoteAlvo) {
         narrar("Você precisa clicar no botão 'Atacar' primeiro!");
     }
 
-      atualizarTodosUnidoes();
+    atualizarTodosUnidoes();
 }
 
 function inimigoAtacar(idUnico) {
+    modoAlvoBarril = false;        // 🚀 Desbloqueia o ataque normal do oponente
+    modoAlvoBarrilInimigo = false;
+
     if (suportePreparado !== null) {
         equiparSuporte(idUnico);
         return;
     }
 
-    // 🚨 TRAVA DE ATAQUE VOLTOU
     if (turnoAtivo !== 2) return narrar("Ainda não é o turno do Oponente atacar!");
+    
     let pacoteInimigo = document.getElementById("pacote-" + idUnico);
     let nomeCartaInimiga = pacoteInimigo.querySelector(".nome-carta").innerText;
     let cartaAtacanteInimigo = bancoDeCartas.find(c => c.nome === nomeCartaInimiga);
@@ -495,6 +569,13 @@ function inimigoAtacar(idUnico) {
     let vidaAtual = parseFloat(document.getElementById("vida-" + idUnico).innerText);
     danoInimigoPreparado = danoLido;
     ultimoIdQueAtacou = idUnico;
+
+    // 📦 ATIVAÇÃO DO BARRIL (LADO DO INIMIGO)
+    if (nomeCartaInimiga.includes('Barril de Goblin')) {
+        modoAlvoBarril = true; 
+        idBarrilAtivo = idUnico;
+        return narrar("📦 O Oponente ativou o Barril! Clique na SUA carta que vai receber os goblins!");
+    }
 
     if (nomeCartaInimiga === 'Trio de Goblin') {
         if (vidaAtual >= 5) { danoInimigoPreparado = 2; narrar("⚔️ O Trio de Goblin inimigo ataca com 2 de dano!"); } 
@@ -526,7 +607,7 @@ function inimigoAtacar(idUnico) {
 
     if (nomeCartaInimiga === 'Cavaleiro das Trevas') {
         let danoArea = 2; let alvosMaximos = 1;
-        if (cavaleiroAtivado[idUnico]) { danoArea = 5; alvosMaximos = 3; } 
+        if (typeof cavaleiroAtivado !== 'undefined' && cavaleiroAtivado[idUnico]) { danoArea = 5; alvosMaximos = 3; } 
         else if (aliadosNoCampo.length >= 2) { danoArea = 3; alvosMaximos = 2; }
         let alvos = aliadosNoCampo.slice(0, alvosMaximos);
         narrar(`⚔️ O Cavaleiro das Trevas inimigo atacou ${alvos.length} de suas cartas causando ${danoArea} de dano em cada!`);
@@ -535,13 +616,28 @@ function inimigoAtacar(idUnico) {
         if (typeof atualizarTodosUnidoes === "function") atualizarTodosUnidoes();
         return;
     }
-
+    
     modoAtaqueInimigo = true; 
     if (aliadosNoCampo.length === 1) aplicarDanoInimigo(aliadosNoCampo[0].id);
     else narrar(`O Oponente preparou um ataque de ${danoInimigoPreparado} de dano! Clique na SUA carta que vai receber o ataque.`);
 }
 
 function aplicarDanoInimigo(idPacoteAlvo) {
+
+    // 🛡️ NOVO: BLOQUEIO DO GUERREIRO ANTES DE TOMAR DANO
+    let idPuro = idPacoteAlvo.replace("pacote-", ""); 
+    if (escudoGuerreiro[idPuro]) {
+        narrar(`🛡️ BLANG! O seu Guerreiro defendeu o ataque inimigo, mas o escudo QUEBROU!`);
+        
+        delete escudoGuerreiro[idPuro]; // 💥 Quebra o escudo após o primeiro hit!
+        
+        modoAtaqueInimigo = false; 
+        danoInimigoPreparado = 0;
+        passarTurno(); 
+        return; 
+    }
+
+    // --- CÓDIGO ORIGINAL CONTINUA NORMALMENTE ABAIXO ---
     let idVida = idPacoteAlvo.replace("pacote-", "vida-");
     let textoVida = document.getElementById(idVida);
     let vidaAtual = parseFloat(textoVida.innerText) - danoInimigoPreparado;
@@ -550,15 +646,17 @@ function aplicarDanoInimigo(idPacoteAlvo) {
     if (vidaAtual <= 0) {
         let pacote = document.getElementById(idPacoteAlvo);
         let nomeDestaCarta = pacote.querySelector(".nome-carta").innerText;
-        let idPuro = idPacoteAlvo.replace("pacote-", "");
 
         narrar("Sua carta foi DESTRUÍDA pelo oponente!");
         pacote.remove();
 
-        if (nomeDestaCarta === "Ork") {
-            let qtd = orkBuffado[idPuro] ? 3 : 2;
-            narrar(`💀 PASSIVA: Seu Ork morreu e invocou ${qtd} Goblins!`);
-            for (let i = 0; i < qtd; i++) invocarToken("goblin", "campo-j1");
+       if (nomeDestaCarta === "Ork") {
+            let qtd = orkBuffado[idPuro] ? 3 : 2; 
+            narrar(`💀 PASSIVA: O seu Ork morreu e invocou ${qtd} Goblins!`);
+            
+            for (let i = 0; i < qtd; i++) {
+                invocarToken("goblin", "campo-j1"); // Seu Ork sempre nasce no j1
+            }
         }
     } else {
         narrar(`Sua carta sofreu ${danoInimigoPreparado} de dano!`);
@@ -570,7 +668,6 @@ function aplicarDanoInimigo(idPacoteAlvo) {
 
     atualizarTodosUnidoes();
 }
-// --- MECÂNICA DA PASSIVA DO UNIDÃO ---
 function atualizarTodosUnidoes() {
     let campoJ1 = document.getElementById("campo-j1");
     let campoJ2 = document.getElementById("campo-j2");
@@ -581,7 +678,6 @@ function atualizarTodosUnidoes() {
 function atualizarUnidoesNoCampo(campoHTML) {
     let todasAsCartas = Array.from(campoHTML.querySelectorAll("div[id^='pacote-']"));
     
-    // Separa os Unidoes das outras cartas normais
     let unidoes = todasAsCartas.filter(pacote => {
         let nome = pacote.querySelector(".nome-carta").innerText;
         return nome === "Unidão" || nome === "Ctrl V (Unidão)";
@@ -592,34 +688,29 @@ function atualizarUnidoesNoCampo(campoHTML) {
         return nome !== "Unidão" && nome !== "Ctrl V (Unidão)";
     });
 
-    // Acha o MAIOR dano entre as outras cartas aliadas (O parceiro ideal)
+    // 1. Acha o MAIOR dano entre as outras cartas
     let maiorDano = 0;
     outrasCartas.forEach(pacote => {
         let idUnico = pacote.id.replace("pacote-", "");
         let spanDano = document.getElementById("dano-" + idUnico);
         if (spanDano) {
-            let dano = parseFloat(spanDano.innerText);
+            let dano = parseInt(spanDano.innerText) || 0; // Garante que é número
             if (dano > maiorDano) maiorDano = dano;
         }
     });
 
-    // Aplica o bônus dinâmico em todos os Unidoes daquela arena
-    unidoes.forEach(unidao => {
-        let idUnico = unidao.id.replace("pacote-", "");
+    // 2. Aplica o bónus ao Unidão
+    unidoes.forEach(pacote => {
+        let idUnico = pacote.id.replace("pacote-", "");
         let spanDano = document.getElementById("dano-" + idUnico);
         
         if (spanDano) {
-            // Se for a primeira vez no campo, inicializa com 0
-            if (typeof bonusUnidao[idUnico] === "undefined") {
-                bonusUnidao[idUnico] = 0;
-            }
+            // O dano base da carta Unidão é 1. Somamos o maiorDano encontrado.
+            let novoDano = 1 + maiorDano; 
+            spanDano.innerText = novoDano;
             
-            // Pega o dano atual e subtrai o bônus velho (para achar o dano "base/buffado")
-            let danoPuro = parseFloat(spanDano.innerText) - bonusUnidao[idUnico];
-            
-            // Salva o novo bônus e soma
-            bonusUnidao[idUnico] = maiorDano;
-            spanDano.innerText = danoPuro + maiorDano;
+            // Opcional: Salva no objeto para referência se precisares depois
+            bonusUnidao[idUnico] = novoDano;
         }
     });
 }
@@ -644,6 +735,74 @@ function aplicarDanoDireto(idPacoteAlvo, dano, isInimigo) {
             for (let i = 0; i < qtd; i++) invocarToken("goblin", campoDestino);
         }
     }
+}
+function obterCartasAdjacentes(idPacoteAlvo) {
+    let pacote = document.getElementById(idPacoteAlvo);
+    if (!pacote) return [];
+    
+    let campo = pacote.parentElement;
+    let cartas = Array.from(campo.querySelectorAll("div[id^='pacote-']"));
+    let index = cartas.indexOf(pacote);
+    let adjacentes = [];
+    
+    if (index > 0) adjacentes.push(cartas[index - 1]);
+    if (index < cartas.length - 1) adjacentes.push(cartas[index + 1]);
+    
+    return adjacentes;
+}
+
+function aplicarAlvoBarril(idPacoteAlvo) {
+    let pacoteAlvo = document.getElementById(idPacoteAlvo);
+    let pacoteBarril = document.getElementById("pacote-" + idBarrilAtivo);
+    
+    // 👇 SE ALGO CORRER MAL, DESLIGA A MIRA PARA NÃO ENCRAVAR O JOGO!
+    if (!pacoteAlvo || !pacoteBarril) {
+        modoAlvoBarril = false;
+        modoAlvoBarrilInimigo = false;
+        return;
+    }
+    // Descobre de qual lado está o Barril e de qual lado está o Alvo
+    let ladoBarril = pacoteBarril.closest("#campo-j1") ? "j1" : "j2";
+    let ladoAlvo = pacoteAlvo.closest("#campo-j1") ? "j1" : "j2";
+
+    // Impede o Barril de atacar as cartas do próprio time
+    if (ladoBarril === ladoAlvo) {
+        return narrar("❌ Escolha uma carta do campo oposto para o Barril atacar!");
+    }
+
+    let nomeAlvo = pacoteAlvo.querySelector(".nome-carta").innerText;
+    let isInimigoParaOJogo = (ladoAlvo === "j2"); 
+
+    // Desliga a mira
+    modoAlvoBarril = false;
+    modoAlvoBarrilInimigo = false;
+
+    let idBarrilPuro = idBarrilAtivo;
+    let idAlvoPuro = idPacoteAlvo.replace("pacote-", "");
+    
+    alvosDoBarril[idBarrilPuro] = idAlvoPuro; 
+
+    narrar(`🎯 Os Goblins do Barril focaram-se em [${nomeAlvo}]!`);
+
+    // LÊ O DANO EXTRA (BUFFS DA BESTA, UNIDÃO, ETC)
+    let txtDanoBarril = document.getElementById("dano-" + idBarrilPuro);
+    let buffDano = txtDanoBarril ? parseFloat(txtDanoBarril.innerText) : 0;
+
+    // DANO DE IMPACTO
+    if (!barrilJaImpactou[idBarrilPuro]) {
+        barrilJaImpactou[idBarrilPuro] = true;
+        
+        let danoImpacto = 1 + buffDano; 
+        
+        let vizinhos = obterCartasAdjacentes(idPacoteAlvo);
+        vizinhos.forEach(vizinho => {
+            aplicarDanoDireto(vizinho.id, danoImpacto, isInimigoParaOJogo);
+        });
+        narrar(`💥 BUM! O primeiro impacto do Barril causou ${danoImpacto} de dano nas cartas adjacentes ao alvo!`);
+    }
+
+    idBarrilAtivo = null;
+    passarTurno(); 
 }
 function equiparSuporte(idAlvo) {
     if (!suportePreparado) return; 
