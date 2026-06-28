@@ -145,6 +145,27 @@ h3 {
     border-color: var(--cor-vida); /* Borda vermelha de "inimigo" */
     z-index: 10;
 }
+/* ==========================================================================
+   EFEITOS DE STATUS (CONGELAMENTO)
+   ========================================================================== */
+.congelada {
+    border-color: #00ffff !important; /* Borda azul ciano brilhante */
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.8) inset, 0 0 10px rgba(0, 255, 255, 0.5) !important;
+    position: relative;
+    filter: brightness(0.8); /* Fica levemente escurecida */
+}
+
+/* Adiciona um floco de gelo gigante em cima da carta */
+.congelada::after {
+    content: '❄️';
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    opacity: 0.8;
+    pointer-events: none; /* Garante que o floco não atrapalhe os cliques */
+}
 
 /* ==========================================================================
    PAINEL DO NARRADOR E TÍTULO

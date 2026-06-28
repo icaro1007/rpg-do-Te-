@@ -93,6 +93,149 @@ function aplicarCuraInimiga(idDoPacote) {
 function usarHabilidade(nome, idUnico, botao) {
     let dadoTela = document.getElementById("dado-tela");
 
+    /// 🪵 HABILIDADE ESPECIAL: BARRIL DE BÁRBARO
+    if (nome.includes('Barril de Bárbaro')) { // 🔥 CORREÇÃO: Estava nomeCarta, agora é só 'nome'
+        let dado = Math.floor(Math.random() * 6) + 1;
+        document.getElementById("dado-tela").innerText = "🎲 " + dado;
+        
+        if (dado === 5) {
+            splashBarbaroAtivo = true;
+            narrar("🎲 O dado rolou 5! O próximo impacto causará +1 de dano nas cartas vizinhas!");
+        } else {
+            splashBarbaroAtivo = false; 
+            narrar(`🎲 O dado rolou ${dado}. Sem dano em área, mas o impacto de 3 de dano continua preparado!`);
+        }
+        
+        // Esconde o botão roxo após usar a habilidade única
+        if (botao) botao.style.display = 'none';
+        return;
+    }
+    // 🛡️ HABILIDADE ESPECIAL: BARRIL (Criar Vínculo de Guarda-Costas)
+    if (nome === 'Barril') {
+        if (idUnico.includes("inimigo")) {
+            // Se o ID tem "inimigo", é o Barril do P2
+            modoProtecaoBarrilInimigo = true;
+            idBarrilProtetor = idUnico;
+            narrar("🛡️ MODO ESCUDO INIMIGO: Clique em uma carta do OPONENTE para o Barril proteger!");
+        } else {
+            // Se o ID não tem "inimigo", é o seu Barril (P1)
+            modoProtecaoBarril = true;
+            idBarrilProtetor = idUnico;
+            narrar("🛡️ MODO ESCUDO ALIADO: Clique em uma de SUAS cartas para o Barril proteger!");
+        }
+        
+        if (botao) botao.style.display = 'none'; // Some com o botão após o uso
+        return;
+    }
+    // 🧪 HABILIDADE ESPECIAL: BRUXO (Polimorfia e Controle Mental)
+    if (nome === 'Bruxo') {
+        if (botao) botao.style.display = 'none'; // Some com o botão
+        
+        let dado = Math.floor(Math.random() * 6) + 1;
+        let dadoTela = document.getElementById("dado-tela");
+        
+        // Efeito visual do dado
+        dadoTela.style.animation = 'none';
+        setTimeout(() => dadoTela.style.animation = '', 10);
+        dadoTela.innerText = "🎲 " + dado;
+
+        setTimeout(() => {
+            // 🚀 SALVA O ID DO BRUXO ATIVO ANTES DE ENTRAR NOS MODOS
+            idBruxoAtivo = idUnico; 
+
+            if (dado === 4) {
+                modoBruxoTransformar = true;
+                narrar("🧪 O Bruxo tirou 4! Clique em uma carta INIMIGA para transformá-la em Poção!");
+            } else if (dado === 6) {
+                modoBruxoRoubar = true;
+                narrar("🔮 O Bruxo tirou 6! Clique em uma carta INIMIGA para ROUBÁ-LA!");
+            } else {
+                narrar(`🎲 O Bruxo rolou ${dado}. A magia falhou e ele virou poção!`);
+                
+                // Pega o bruxo correto e o lado dele para gerar a poção
+                let pacoteBruxo = document.getElementById("pacote-" + idUnico);
+                if (pacoteBruxo) {
+                    let oBruxoEAliado = pacoteBruxo.closest("#campo-j1") !== null;
+                    let maoDestino = oBruxoEAliado ? "mao-j1" : "mao-j2";
+                    gerarPocaoAleatoria(maoDestino); // Cria a poção
+                    pacoteBruxo.remove(); // Remove o Bruxo do campo
+                }
+                
+                idBruxoAtivo = null; // Reseta o uso
+            }
+        }, 1000);
+        
+        return;
+    }
+    // ❄️ IMPEDIR CARTAS CONGELADAS DE USAR ESPECIAL
+    let pacoteDono = document.getElementById("pacote-" + idUnico);
+    if (pacoteDono && pacoteDono.classList.contains("congelada")) {
+        narrar("❄️ Esta carta está congelada e não pode usar habilidades!");
+        return;
+    }
+
+    // ❄️ EFEITO DA POÇÃO DE GELO
+    if (nome === 'Poção de Gelo' || nome === 'Gelo' || nome === 'Pocaogelo' || idUnico.includes("pocaogelo")) {
+        let dado = Math.floor(Math.random() * 6) + 1; // Rola o dado de 1 a 6
+        narrar(`🧪 Você usou a Poção de Gelo! O dado rolou: ${dado}`);
+
+        if (dado === 5) {
+            narrar("❄️ NEVASCA! Todas as cartas inimigas (campo e mão) foram congeladas por 1,5 rodadas!");
+            
+            let pacotePocao = document.getElementById("pacote-" + idUnico);
+            let aPocaoEAliada = true;
+            
+            if (pacotePocao) {
+                aPocaoEAliada = pacotePocao.closest("#campo-j1") !== null || pacotePocao.closest("#mao-j1") !== null;
+            }
+            
+            // Descobre quem é o inimigo para mirar nele
+            let idCampoInimigo = aPocaoEAliada ? "campo-j2" : "campo-j1";
+            let idMaoInimiga = aPocaoEAliada ? "mao-j2" : "mao-j1";
+            
+            // 🎯 A MÁGICA AQUI: Seleciona apenas as CARTAS ([id^="pacote-"]) dentro da mão e do campo do inimigo
+            let cartasInimigas = document.querySelectorAll(`#${idCampoInimigo} [id^="pacote-"], #${idMaoInimiga} [id^="pacote-"]`);
+            
+            if (cartasInimigas.length === 0) {
+                narrar("💨 A nevasca soprou, mas não havia cartas inimigas para congelar!");
+            } else {
+                // Congela cada uma das cartas individualmente
+                cartasInimigas.forEach(pacoteCard => {
+                    // Extrai o ID único da carta removendo o prefixo "pacote-"
+                    let idCarta = pacoteCard.id.replace("pacote-", "");
+                    
+                    // Define a duração exata para 3 turnos (1,5 rodadas)
+                    duracaoGelo[idCarta] = 3; 
+                    
+                    // Aplica o visual de gelo direto na carta!
+                    pacoteCard.classList.add("congelada");
+                });
+                
+                narrar(`❄️ Sucesso! A nevasca congelou todas as ${cartasInimigas.length} carta(s) do oponente!`);
+            }
+            
+            let aplicarGelo = (carta) => {
+                carta.classList.add("congelada");
+                let idSemPacote = carta.id.replace("pacote-", "");
+                duracaoGelo[idSemPacote] = 3; // 3 turnos = 1 rodada completa
+            };
+
+            if (campoInimigo) Array.from(campoInimigo.children).forEach(aplicarGelo);
+            if (maoInimiga) Array.from(maoInimiga.children).forEach(aplicarGelo);
+
+            if (pacotePocao) pacotePocao.remove();
+            idPocaoAtiva = null;
+            modoGeloSimples = false;
+        } else {
+            // Qualquer outro dado ativa o Alvo Simples
+            narrar("❄️ Gelo Simples ativado! Clique em qualquer carta (campo ou mão) para congelar.");
+            modoGeloSimples = true;
+            idPocaoAtiva = idUnico;
+        }
+        
+        if (typeof atualizarTodosUnidoes === "function") atualizarTodosUnidoes();
+        return;
+    }
     if (nome === 'Necromante') {
         let resultadoDado = Math.floor(Math.random() * 6) + 1;
         
